@@ -8,10 +8,10 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/YourApp.xcworkspace"
         XCODE_SCHEME: "YourApp"
-        APPLE_SIGNING_CERTIFICATE: Encrypted(signing_certificate)
-        APPLE_PROVISIONING_PROFILE: Encrypted(provisioning_profile)
-
-      ios_signing:
+        
+    ios_signing:
+      code_signing:
+        method: manual  # Thêm phương thức sign
         provisioning_profiles:
           - YourApp_Profile.mobileprovision
         certificates:
