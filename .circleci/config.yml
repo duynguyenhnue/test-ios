@@ -3,7 +3,7 @@ version: 2.1
 executors:
   macos-executor:
     macos:
-      xcode: "14.0.0"  # Chọn phiên bản Xcode (Xcode 14.0 trở lên)
+      xcode: "14.0.0"  # Phiên bản Xcode
 
 jobs:
   build-ios:
@@ -43,3 +43,10 @@ jobs:
       - store_artifacts:
           path: build/
           destination: /artifacts
+
+# Thêm workflow vào đây
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build-ios
