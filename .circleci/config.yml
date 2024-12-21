@@ -3,19 +3,15 @@ version: 2.1
 executors:
   macos-executor:
     macos:
-      xcode: "14.0.0"
+      xcode: "14.0.0"  # Xcode version phù hợp (tuỳ chỉnh theo dự án)
 
 jobs:
-  build-ios:
+  build:
     executor: macos-executor
     steps:
-      - checkout
+      - checkout  # Lấy mã nguồn mới nhất
 
-      - restore_cache:
-          keys:
-            - node-deps-v1-{{ checksum "yarn.lock" }}
-            - node-deps-v1-
-
+      # Cài đặt Node.js và Yarn
       - run:
           name: Install Node.js with nvm
           command: |
@@ -26,49 +22,51 @@ jobs:
             node -v
             npm install -g yarn
 
+      # Kiểm tra node và yarn
+      - run:
+          name: Verify Node.js and Yarn
+          command: |
+            node -v
+            yarn -v
+
+      # Cài dependencies
       - run:
           name: Install dependencies
           command: yarn install
 
-      - save_cache:
-          paths:
-            - node_modules
-          key: node-deps-v1-{{ checksum "yarn.lock" }}
-
+      # Cài đặt CocoaPods (iOS)
       - run:
           name: Install pod dependencies
           command: |
-            if [ -d "ios" ]; then
-              cd ios
-              pod install
-            else
-              echo "iOS folder not found"
-              exit 1
-            fi
+            cd ios
+            pod install
 
+      # Build app iOS bằng xcodebuild
       - run:
-          name: Build iOS app
+          name: Build iOS App
           command: |
             xcodebuild -workspace ios/MyApp.xcworkspace \
                        -scheme MyApp \
                        -sdk iphoneos \
                        -configuration Release \
-                       archive -archivePath $CIRCLE_WORKING_DIRECTORY/build/MyApp.xcarchive
+                       archive -archivePath $PWD/build/MyApp.xcarchive
 
+      # Xuất file IPA để cài lên thiết bị
       - run:
           name: Export .ipa
           command: |
             xcodebuild -exportArchive \
-                       -archivePath $CIRCLE_WORKING_DIRECTORY/build/MyApp.xcarchive \
+                       -archivePath $PWD/build/MyApp.xcarchive \
                        -exportOptionsPlist ios/exportOptions.plist \
-                       -exportPath $CIRCLE_WORKING_DIRECTORY/build/
+                       -exportPath $PWD/build
 
+      # Upload IPA lên CircleCI artifacts
       - store_artifacts:
-          path: build/
-          destination: /artifacts
+          path: build/*.ipa
+          destination: MyApp.ipa
 
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - build-ios
+      - build
