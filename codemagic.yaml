@@ -8,14 +8,13 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/YourApp.xcworkspace"
         XCODE_SCHEME: "YourApp"
-        
+
     ios_signing:
-      code_signing:
-        method: manual  # Thêm phương thức sign
+      manual:
         provisioning_profiles:
-          - YourApp_Profile.mobileprovision
+          - "YourApp_Profile.mobileprovision"
         certificates:
-          - certificate_path: certs/YourAppCertificate.p12
+          - certificate_path: "certs/YourAppCertificate.p12"
             password: $APPLE_CERTIFICATE_PASSWORD
 
     scripts:
