@@ -1,72 +1,82 @@
 version: 2.1
 
 executors:
-  macos-executor:
-    macos:
-      xcode: "14.0.0"  # Xcode version phù hợp (tuỳ chỉnh theo dự án)
+  react_native_executor:
+    docker:
+      - image: circleci/node:18
+    working_directory: ~/project
 
 jobs:
-  build:
-    executor: macos-executor
+  setup:
+    executor: react_native_executor
     steps:
-      - checkout  # Lấy mã nguồn mới nhất
-
-      # Cài đặt Node.js và Yarn
+      - checkout
       - run:
-          name: Install Node.js with nvm
+          name: Install NVM and Node.js
           command: |
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             nvm install 18
             nvm use 18
-            node -v
-            npm install -g yarn
+            echo "export NVM_DIR=$NVM_DIR" >> $BASH_ENV
+            echo 'source $NVM_DIR/nvm.sh' >> $BASH_ENV
 
-      # Kiểm tra node và yarn
       - run:
           name: Verify Node.js and Yarn
           command: |
+            source $BASH_ENV
             node -v
             yarn -v
 
-      # Cài dependencies
+      - restore_cache:
+          keys:
+            - node-deps-{{ checksum "yarn.lock" }}
+            - node-deps-
+
       - run:
           name: Install dependencies
-          command: yarn install
+          command: |
+            source $BASH_ENV
+            yarn install --frozen-lockfile
 
-      # Cài đặt CocoaPods (iOS)
+      - save_cache:
+          key: node-deps-{{ checksum "yarn.lock" }}
+          paths:
+            - node_modules
+
+  ios_build:
+    macos:
+      xcode: 14.2.0
+    working_directory: ~/project
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - node-deps-{{ checksum "yarn.lock" }}
+            - node-deps-
+
       - run:
-          name: Install pod dependencies
+          name: Install CocoaPods
           command: |
             cd ios
             pod install
 
-      # Build app iOS bằng xcodebuild
       - run:
-          name: Build iOS App
+          name: Build iOS
           command: |
             xcodebuild -workspace ios/MyApp.xcworkspace \
-                       -scheme MyApp \
-                       -sdk iphoneos \
-                       -configuration Release \
-                       archive -archivePath $PWD/build/MyApp.xcarchive
-
-      # Xuất file IPA để cài lên thiết bị
-      - run:
-          name: Export .ipa
-          command: |
-            xcodebuild -exportArchive \
-                       -archivePath $PWD/build/MyApp.xcarchive \
-                       -exportOptionsPlist ios/exportOptions.plist \
-                       -exportPath $PWD/build
-
-      # Upload IPA lên CircleCI artifacts
-      - store_artifacts:
-          path: build/*.ipa
-          destination: MyApp.ipa
+              -scheme MyApp \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 14,OS=16.2' \
+              build
 
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - setup
+      - ios_build:
+          requires:
+            - setup
