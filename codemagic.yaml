@@ -1,0 +1,60 @@
+workflows:
+  ios-build:
+    name: iOS Build (React Native)
+    max_build_duration: 120
+    instance_type: mac_mini_m1  # or mac_pro
+
+    environment:
+      vars:
+        XCODE_WORKSPACE: "ios/YourApp.xcworkspace"
+        XCODE_SCHEME: "YourApp"
+        APPLE_SIGNING_CERTIFICATE: Encrypted(signing_certificate)
+        APPLE_PROVISIONING_PROFILE: Encrypted(provisioning_profile)
+
+      ios_signing:
+        provisioning_profiles:
+          - YourApp_Profile.mobileprovision
+        certificates:
+          - certificate_path: certs/YourAppCertificate.p12
+            password: $APPLE_CERTIFICATE_PASSWORD
+
+    scripts:
+      - name: Checkout code
+        script: git clone $CM_REPO_URL .
+
+      - name: Set up Node.js and dependencies
+        script: |
+          brew install node
+          npm install -g yarn
+          yarn install
+
+      - name: Install Pods
+        script: |
+          cd ios
+          pod install
+
+      - name: Build iOS App
+        script: |
+          xcodebuild clean archive \
+          -workspace $XCODE_WORKSPACE \
+          -scheme $XCODE_SCHEME \
+          -sdk iphoneos \
+          -configuration Release \
+          -archivePath $CM_BUILD_DIR/YourApp.xcarchive
+
+      - name: Export IPA
+        script: |
+          xcodebuild -exportArchive \
+          -archivePath $CM_BUILD_DIR/YourApp.xcarchive \
+          -exportPath $CM_BUILD_DIR/build/ \
+          -exportOptionsPlist ios/exportOptions.plist
+
+    artifacts:
+      - build/**/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Logs/Test/*.xcresult
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
