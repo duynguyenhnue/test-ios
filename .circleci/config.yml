@@ -13,7 +13,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - node-deps-v1-{{ checksum "package-lock.json" }}
+            - node-deps-v1-{{ checksum "yarn.lock" }}
             - node-deps-v1-
 
       - run:
@@ -26,16 +26,25 @@ jobs:
             node -v
             npm install -g yarn
 
+      - run:
+          name: Install dependencies
+          command: yarn install
+
       - save_cache:
           paths:
             - node_modules
-          key: node-deps-v1-{{ checksum "package-lock.json" }}
+          key: node-deps-v1-{{ checksum "yarn.lock" }}
 
       - run:
           name: Install pod dependencies
           command: |
-            cd ios
-            pod install
+            if [ -d "ios" ]; then
+              cd ios
+              pod install
+            else
+              echo "iOS folder not found"
+              exit 1
+            fi
 
       - run:
           name: Build iOS app
