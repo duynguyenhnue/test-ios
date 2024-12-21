@@ -3,7 +3,7 @@ version: 2.1
 executors:
   macos-executor:
     macos:
-      xcode: "14.0.0"  # Phiên bản Xcode
+      xcode: "14.0.0"
 
 jobs:
   build-ios:
@@ -11,14 +11,28 @@ jobs:
     steps:
       - checkout
 
-      - run:
-          name: Install Node.js và Yarn
-          command: |
-            brew install node
-            npm install -g yarn
+      - restore_cache:
+          keys:
+            - node-deps-v1-{{ checksum "package-lock.json" }}
+            - node-deps-v1-
 
       - run:
-          name: Cài đặt pod dependencies
+          name: Install Node.js with nvm
+          command: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm install 18
+            nvm use 18
+            node -v
+            npm install -g yarn
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: node-deps-v1-{{ checksum "package-lock.json" }}
+
+      - run:
+          name: Install pod dependencies
           command: |
             cd ios
             pod install
@@ -44,7 +58,6 @@ jobs:
           path: build/
           destination: /artifacts
 
-# Thêm workflow vào đây
 workflows:
   version: 2
   build_and_test:
