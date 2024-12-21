@@ -1,9 +1,10 @@
-name: iOS Build
+name: Build iOS App
 
-on:
+on: 
   push:
     branches:
       - main
+      - master
 
 jobs:
   build:
@@ -13,35 +14,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Check if iOS folder exists
-        run: |
-          if [ ! -d "ios" ]; then
-            echo "iOS folder not found. Initializing iOS project..."
-            npx react-native eject
-            cd ios
-            pod install
-          else
-            cd ios
-            pod install
-          fi
+      - name: Set up Xcode
+        run: sudo xcode-select -switch /Applications/Xcode.app
+
+      - name: Install CocoaPods
+        run: pod install --project-directory=ios
 
       - name: Build iOS App
-        run: |
-          xcodebuild -workspace ios/MyApp.xcworkspace \
-                     -scheme MyApp \
-                     -sdk iphoneos \
-                     -configuration Release \
-                     archive -archivePath ${{github.workspace}}/build/MyApp.xcarchive
+        run: xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -sdk iphoneos -configuration Release archive -archivePath ${{ github.workspace }}/YourApp.xcarchive
 
-      - name: Export .ipa
-        run: |
-          xcodebuild -exportArchive \
-                     -archivePath ${{github.workspace}}/build/MyApp.xcarchive \
-                     -exportOptionsPlist ios/exportOptions.plist \
-                     -exportPath ${{github.workspace}}/build
+      - name: Export IPA
+        run: xcodebuild -exportArchive -archivePath ${{ github.workspace }}/YourApp.xcarchive -exportOptionsPlist ios/exportOptions.plist -exportPath ${{ github.workspace }}/build
 
-      - name: Upload IPA Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: iOS-App
-          path: build/*.ipa
+          name: ios-app
+          path: ${{ github.workspace }}/build
